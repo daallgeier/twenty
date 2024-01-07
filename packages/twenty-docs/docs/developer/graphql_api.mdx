@@ -22,10 +22,17 @@ GraphQL query language is strongly typed, which makes it possible for you to que
 With the Introspection feature, you can query the schema and discover the queries (to request data), mutations (to update data), types, and fields available in a particular GraphQL API.
 
 ## Try the GraphQL Playground
-You can use the browser-based, interactive [GraphQL playground](https://docs.twenty.com/graphql/) to run mutations and queries to discover valid fields and where you can use them.    
+You can use the browser-based, interactive [GraphQL playground](https://docs.twenty.com/graphql/) to run mutations and queries to discover valid fields and where you can use them.  You can learn even more on the [GraphiQL Readme](https://github.com/graphql/graphiql/tree/main/packages/graphiql)
 
 ### Authentication
-You can authenticate yourself in the [GraphQL playground](https://docs.twenty.com/graphql/) using the following steps. 
+You can authenticate yourself in the [GraphQL playground](https://docs.twenty.com/graphql/) using the Headers Section with this json:
+
+```
+{
+  "email": "$your-email",
+  "Authorization": "Bearer $API-Token"
+}
+```
 
 ### GraphiQL Getting Started and first Queries
 In the [GraphQL playground](https://docs.twenty.com/graphql/) a good first step is to list all your People.  You can do this using the following Query:

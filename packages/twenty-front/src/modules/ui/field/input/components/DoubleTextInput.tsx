@@ -2,7 +2,7 @@ import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import styled from '@emotion/styled';
 import { Key } from 'ts-key-enum';
 
-import { FieldDoubleText } from '@/object-record/field/types/FieldDoubleText';
+import { FieldDoubleText } from '@/object-record/record-field/types/FieldDoubleText';
 import { useScopedHotkeys } from '@/ui/utilities/hotkey/hooks/useScopedHotkeys';
 import { useListenClickOutside } from '@/ui/utilities/pointer-event/hooks/useListenClickOutside';
 import { isDefined } from '~/utils/isDefined';
@@ -38,6 +38,7 @@ type DoubleTextInputProps = {
     event: MouseEvent | TouchEvent,
     newDoubleTextValue: FieldDoubleText,
   ) => void;
+  onChange?: (newDoubleTextValue: FieldDoubleText) => void;
 };
 
 export const DoubleTextInput = ({
@@ -51,6 +52,7 @@ export const DoubleTextInput = ({
   onEscape,
   onShiftTab,
   onTab,
+  onChange,
 }: DoubleTextInputProps) => {
   const [firstInternalValue, setFirstInternalValue] = useState(firstValue);
   const [secondInternalValue, setSecondInternalValue] = useState(secondValue);
@@ -70,6 +72,11 @@ export const DoubleTextInput = ({
   ): void => {
     setFirstInternalValue(newFirstValue);
     setSecondInternalValue(newSecondValue);
+
+    onChange?.({
+      firstValue: newFirstValue,
+      secondValue: newSecondValue,
+    });
   };
 
   const [focusPosition, setFocusPosition] = useState<'left' | 'right'>('left');

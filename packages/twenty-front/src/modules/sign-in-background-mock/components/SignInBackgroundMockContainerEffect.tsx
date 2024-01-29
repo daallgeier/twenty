@@ -12,27 +12,26 @@ import {
 } from '@/sign-in-background-mock/constants/signInBackgroundMockDefinitions';
 import { signInBackgroundMockViewFields } from '@/sign-in-background-mock/constants/signInBackgroundMockViewFields';
 import { useViewBar } from '@/views/hooks/useViewBar';
-import { ViewType } from '@/views/types/ViewType';
 import { mapViewFieldsToColumnDefinitions } from '@/views/utils/mapViewFieldsToColumnDefinitions';
 
 type SignInBackgroundMockContainerEffectProps = {
+  objectNamePlural: string;
   recordTableId: string;
   viewId: string;
 };
 
 export const SignInBackgroundMockContainerEffect = ({
+  objectNamePlural,
   recordTableId,
   viewId,
 }: SignInBackgroundMockContainerEffectProps) => {
   const {
-    scopeId: objectNamePlural,
     setAvailableTableColumns,
     setOnEntityCountChange,
     setRecordTableData,
     setTableColumns,
-    setObjectMetadataConfig,
   } = useRecordTable({
-    recordTableScopeId: recordTableId,
+    recordTableId,
   });
 
   const { objectNameSingular } = useObjectNameSingularFromPlural({
@@ -47,14 +46,12 @@ export const SignInBackgroundMockContainerEffect = ({
     setAvailableSortDefinitions,
     setAvailableFilterDefinitions,
     setAvailableFieldDefinitions,
-    setViewType,
     setViewObjectMetadataId,
     setEntityCountInCurrentView,
   } = useViewBar({ viewBarId: viewId });
 
   useEffect(() => {
     setViewObjectMetadataId?.(objectMetadataItem.id);
-    setViewType?.(ViewType.Table);
 
     setAvailableSortDefinitions?.(signInBackgroundMockSortDefinitions);
     setAvailableFilterDefinitions?.(signInBackgroundMockFilterDefinitions);
@@ -74,7 +71,6 @@ export const SignInBackgroundMockContainerEffect = ({
     );
   }, [
     setViewObjectMetadataId,
-    setViewType,
     setAvailableSortDefinitions,
     setAvailableFilterDefinitions,
     setAvailableFieldDefinitions,
@@ -84,13 +80,10 @@ export const SignInBackgroundMockContainerEffect = ({
     setTableColumns,
   ]);
 
-  useEffect(() => {
-    setObjectMetadataConfig?.(mockIdentifier);
-  }, [setObjectMetadataConfig]);
-
   const { setActionBarEntries, setContextMenuEntries } =
     useRecordTableContextMenuEntries({
-      recordTableScopeId: recordTableId,
+      objectNamePlural,
+      recordTableId,
     });
 
   useEffect(() => {
@@ -105,9 +98,4 @@ export const SignInBackgroundMockContainerEffect = ({
   }, [setEntityCountInCurrentView, setOnEntityCountChange]);
 
   return <></>;
-};
-
-const mockIdentifier = {
-  basePathToShowPage: '/object/company/',
-  labelIdentifierFieldMetadataId: '20202020-6d30-4111-9f40-b4301906fd3c',
 };

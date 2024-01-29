@@ -1,8 +1,8 @@
 import { useRecoilCallback } from 'recoil';
 
-import { useRecordTableScopedStates } from '@/object-record/record-table/hooks/internal/useRecordTableScopedStates';
-import { getRecordTableScopeInjector } from '@/object-record/record-table/utils/getRecordTableScopeInjector';
+import { useRecordTableStates } from '@/object-record/record-table/hooks/internal/useRecordTableStates';
 import { currentHotkeyScopeState } from '@/ui/utilities/hotkey/states/internal/currentHotkeyScopeState';
+import { getSnapshotValue } from '@/ui/utilities/recoil-scope/utils/getSnapshotValue';
 
 import { TableHotkeyScope } from '../../types/TableHotkeyScope';
 
@@ -12,34 +12,29 @@ export const useMoveSoftFocusToCurrentCellOnHover = () => {
   const setSoftFocusOnCurrentTableCell = useSetSoftFocusOnCurrentTableCell();
 
   const {
-    currentTableCellInEditModePositionScopeInjector,
-    isTableCellInEditModeScopeInjector,
-  } = getRecordTableScopeInjector();
-
-  const {
-    injectSnapshotValueWithRecordTableScopeId,
-    injectFamilyStateWithRecordTableScopeId,
-  } = useRecordTableScopedStates();
-
-  const isTableCellInEditModeFamilyState =
-    injectFamilyStateWithRecordTableScopeId(isTableCellInEditModeScopeInjector);
+    getCurrentTableCellInEditModePositionState,
+    isTableCellInEditModeFamilyState,
+  } = useRecordTableStates();
 
   return useRecoilCallback(
     ({ snapshot }) =>
       () => {
-        const currentTableCellInEditModePosition =
-          injectSnapshotValueWithRecordTableScopeId(
-            snapshot,
-            currentTableCellInEditModePositionScopeInjector,
-          );
-
-        const isSomeCellInEditMode = snapshot.getLoadable(
-          isTableCellInEditModeFamilyState(currentTableCellInEditModePosition),
+        const currentTableCellInEditModePosition = getSnapshotValue(
+          snapshot,
+          getCurrentTableCellInEditModePositionState(),
         );
+
+        const isSomeCellInEditMode = snapshot
+          .getLoadable(
+            isTableCellInEditModeFamilyState(
+              currentTableCellInEditModePosition,
+            ),
+          )
+          .getValue();
 
         const currentHotkeyScope = snapshot
           .getLoadable(currentHotkeyScopeState)
-          .valueOrThrow();
+          .getValue();
 
         if (
           currentHotkeyScope.scope !== TableHotkeyScope.TableSoftFocus &&
@@ -49,13 +44,12 @@ export const useMoveSoftFocusToCurrentCellOnHover = () => {
           return;
         }
 
-        if (!isSomeCellInEditMode.contents) {
+        if (!isSomeCellInEditMode) {
           setSoftFocusOnCurrentTableCell();
         }
       },
     [
-      currentTableCellInEditModePositionScopeInjector,
-      injectSnapshotValueWithRecordTableScopeId,
+      getCurrentTableCellInEditModePositionState,
       isTableCellInEditModeFamilyState,
       setSoftFocusOnCurrentTableCell,
     ],

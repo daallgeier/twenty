@@ -1,163 +1,119 @@
-import { QueryHookOptions, QueryResult } from '@apollo/client';
 import { isNonEmptyString } from '@sniptt/guards';
 
 import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
 import { OrderBy } from '@/object-metadata/types/OrderBy';
-import { EntitiesForMultipleEntitySelect } from '@/object-record/relation-picker/components/MultipleEntitySelect';
+import { DEFAULT_SEARCH_REQUEST_LIMIT } from '@/object-record/constants/DefaultSearchRequestLimit';
+import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
+import { EntitiesForMultipleEntitySelect } from '@/object-record/relation-picker/types/EntitiesForMultipleEntitySelect';
 import { EntityForSelect } from '@/object-record/relation-picker/types/EntityForSelect';
-import { mapPaginatedRecordsToRecords } from '@/object-record/utils/mapPaginatedRecordsToRecords';
+import { ObjectRecord } from '@/object-record/types/ObjectRecord';
+import { makeAndFilterVariables } from '@/object-record/utils/makeAndFilterVariables';
+import { makeOrFilterVariables } from '@/object-record/utils/makeOrFilterVariables';
 import { assertNotNull } from '~/utils/assert';
-import { isDefined } from '~/utils/isDefined';
 
 type SearchFilter = { fieldNames: string[]; filter: string | number };
-
-export const DEFAULT_SEARCH_REQUEST_LIMIT = 60;
 
 // TODO: use this for all search queries, because we need selectedEntities and entitiesToSelect each time we want to search
 // Filtered entities to select are
 
-// TODO: replace query hooks by useFindManyRecords
 export const useFilteredSearchEntityQuery = ({
-  queryHook,
   orderByField,
   filters,
   sortOrder = 'AscNullsLast',
   selectedIds,
-  mappingFunction,
   limit,
   excludeEntityIds = [],
   objectNameSingular,
 }: {
-  queryHook: (
-    queryOptions?: QueryHookOptions<any, any>,
-  ) => QueryResult<any, any>;
   orderByField: string;
   filters: SearchFilter[];
   sortOrder?: OrderBy;
   selectedIds: string[];
-  mappingFunction: (entity: any) => EntityForSelect | undefined;
   limit?: number;
   excludeEntityIds?: string[];
   objectNameSingular: string;
 }): EntitiesForMultipleEntitySelect<EntityForSelect> => {
-  const { objectMetadataItem } = useObjectMetadataItem({
+  const { mapToObjectRecordIdentifier } = useObjectMetadataItem({
     objectNameSingular,
   });
+  const mappingFunction = (record: ObjectRecord) => ({
+    ...mapToObjectRecordIdentifier(record),
+    record,
+  });
+  const selectedIdsFilter = { id: { in: selectedIds } };
 
-  const { loading: selectedEntitiesLoading, data: selectedEntitiesData } =
-    queryHook({
-      variables: {
-        filter: {
-          id: {
-            in: selectedIds,
-          },
-        },
-        orderBy: {
-          [orderByField]: sortOrder,
-        },
-      } as any,
+  const { loading: selectedRecordsLoading, records: selectedRecords } =
+    useFindManyRecords({
+      objectNameSingular,
+      filter: selectedIdsFilter,
+      orderBy: { [orderByField]: sortOrder },
+      skip: !selectedIds.length,
     });
 
-  const searchFilter = filters
-    .map(({ fieldNames, filter }) => {
-      if (!isNonEmptyString(filter)) {
-        return undefined;
-      }
+  const searchFilters = filters.map(({ fieldNames, filter }) => {
+    if (!isNonEmptyString(filter)) {
+      return undefined;
+    }
 
-      return {
-        or: fieldNames.map((fieldName) => {
-          const fieldNameParts = fieldName.split('.');
+    return makeOrFilterVariables(
+      fieldNames.map((fieldName) => {
+        const [parentFieldName, subFieldName] = fieldName.split('.');
 
-          if (fieldNameParts.length > 1) {
-            // Composite field
-
-            return {
-              [fieldNameParts[0]]: {
-                [fieldNameParts[1]]: {
-                  ilike: `%${filter}%`,
-                },
-              },
-            };
-          }
+        if (subFieldName) {
+          // Composite field
           return {
-            [fieldName]: {
-              ilike: `%${filter}%`,
+            [parentFieldName]: {
+              [subFieldName]: {
+                ilike: `%${filter}%`,
+              },
             },
           };
-        }),
-      };
-    })
-    .filter(isDefined);
+        }
 
-  const {
-    loading: filteredSelectedEntitiesLoading,
-    data: filteredSelectedEntitiesData,
-  } = queryHook({
-    variables: {
-      filter: {
-        and: [
-          {
-            and: searchFilter,
+        return {
+          [fieldName]: {
+            ilike: `%${filter}%`,
           },
-          {
-            id: {
-              in: selectedIds,
-            },
-          },
-        ],
-      },
-      orderBy: {
-        [orderByField]: sortOrder,
-      },
-    } as any,
+        };
+      }),
+    );
   });
 
-  const { loading: entitiesToSelectLoading, data: entitiesToSelectData } =
-    queryHook({
-      variables: {
-        filter: {
-          and: [
-            {
-              and: searchFilter,
-            },
-            {
-              not: {
-                id: {
-                  in: [...selectedIds, ...excludeEntityIds],
-                },
-              },
-            },
-          ],
-        },
-        limit: limit ?? DEFAULT_SEARCH_REQUEST_LIMIT,
-        orderBy: {
-          [orderByField]: sortOrder,
-        },
-      } as any,
+  const {
+    loading: filteredSelectedRecordsLoading,
+    records: filteredSelectedRecords,
+  } = useFindManyRecords({
+    objectNameSingular,
+    filter: makeAndFilterVariables([...searchFilters, selectedIdsFilter]),
+    orderBy: { [orderByField]: sortOrder },
+    skip: !selectedIds.length,
+  });
+
+  const notFilterIds = [...selectedIds, ...excludeEntityIds];
+  const notFilter = notFilterIds.length
+    ? { not: { id: { in: notFilterIds } } }
+    : undefined;
+  const { loading: recordsToSelectLoading, records: recordsToSelect } =
+    useFindManyRecords({
+      objectNameSingular,
+      filter: makeAndFilterVariables([...searchFilters, notFilter]),
+      limit: limit ?? DEFAULT_SEARCH_REQUEST_LIMIT,
+      orderBy: { [orderByField]: sortOrder },
     });
 
   return {
-    selectedEntities: mapPaginatedRecordsToRecords({
-      objectNamePlural: objectMetadataItem.namePlural,
-      pagedRecords: selectedEntitiesData,
-    })
+    selectedEntities: selectedRecords
       .map(mappingFunction)
       .filter(assertNotNull),
-    filteredSelectedEntities: mapPaginatedRecordsToRecords({
-      objectNamePlural: objectMetadataItem.namePlural,
-      pagedRecords: filteredSelectedEntitiesData,
-    })
+    filteredSelectedEntities: filteredSelectedRecords
       .map(mappingFunction)
       .filter(assertNotNull),
-    entitiesToSelect: mapPaginatedRecordsToRecords({
-      objectNamePlural: objectMetadataItem.namePlural,
-      pagedRecords: entitiesToSelectData,
-    })
+    entitiesToSelect: recordsToSelect
       .map(mappingFunction)
       .filter(assertNotNull),
     loading:
-      entitiesToSelectLoading ||
-      filteredSelectedEntitiesLoading ||
-      selectedEntitiesLoading,
+      recordsToSelectLoading ||
+      filteredSelectedRecordsLoading ||
+      selectedRecordsLoading,
   };
 };

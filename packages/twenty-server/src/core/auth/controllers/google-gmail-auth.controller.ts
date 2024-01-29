@@ -7,12 +7,14 @@ import { GoogleGmailOauthGuard } from 'src/core/auth/guards/google-gmail-oauth.g
 import { GoogleGmailRequest } from 'src/core/auth/strategies/google-gmail.auth.strategy';
 import { GoogleGmailService } from 'src/core/auth/services/google-gmail.service';
 import { TokenService } from 'src/core/auth/services/token.service';
+import { EnvironmentService } from 'src/integrations/environment/environment.service';
 
 @Controller('auth/google-gmail')
 export class GoogleGmailAuthController {
   constructor(
     private readonly googleGmailService: GoogleGmailService,
     private readonly tokenService: TokenService,
+    private readonly environmentService: EnvironmentService,
   ) {}
 
   @Get()
@@ -35,7 +37,7 @@ export class GoogleGmailAuthController {
     const { workspaceMemberId, workspaceId } =
       await this.tokenService.verifyTransientToken(transientToken);
 
-    this.googleGmailService.saveConnectedAccount({
+    await this.googleGmailService.saveConnectedAccount({
       handle: email,
       workspaceMemberId: workspaceMemberId,
       workspaceId: workspaceId,
@@ -44,6 +46,8 @@ export class GoogleGmailAuthController {
       refreshToken,
     });
 
-    return res.redirect('http://localhost:3001/settings/accounts');
+    return res.redirect(
+      `${this.environmentService.getFrontBaseUrl()}/settings/accounts`,
+    );
   }
 }

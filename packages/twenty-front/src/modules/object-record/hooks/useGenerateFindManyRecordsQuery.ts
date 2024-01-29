@@ -4,23 +4,23 @@ import { useMapFieldMetadataToGraphQLQuery } from '@/object-metadata/hooks/useMa
 import { ObjectMetadataItem } from '@/object-metadata/types/ObjectMetadataItem';
 import { capitalize } from '~/utils/string/capitalize';
 
-export const useGenerateFindManyRecordsQuery = ({
-  objectMetadataItem,
-  depth,
-}: {
-  objectMetadataItem: ObjectMetadataItem;
-  depth?: number;
-}) => {
+export const useGenerateFindManyRecordsQuery = () => {
   const mapFieldMetadataToGraphQLQuery = useMapFieldMetadataToGraphQLQuery();
 
-  return gql`
+  return ({
+    objectMetadataItem,
+    depth,
+  }: {
+    objectMetadataItem: ObjectMetadataItem;
+    depth?: number;
+  }) => gql`
     query FindMany${capitalize(
       objectMetadataItem.namePlural,
     )}($filter: ${capitalize(
       objectMetadataItem.nameSingular,
     )}FilterInput, $orderBy: ${capitalize(
       objectMetadataItem.nameSingular,
-    )}OrderByInput, $lastCursor: String, $limit: Float = 30) {
+    )}OrderByInput, $lastCursor: String, $limit: Float) {
       ${
         objectMetadataItem.namePlural
       }(filter: $filter, orderBy: $orderBy, first: $limit, after: $lastCursor){

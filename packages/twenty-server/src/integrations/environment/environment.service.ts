@@ -2,6 +2,8 @@
 import { Injectable, LogLevel } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { EmailDriver } from 'src/integrations/email/interfaces/email.interface';
+
 import { LoggerDriverType } from 'src/integrations/logger/interfaces';
 import { ExceptionHandlerDriver } from 'src/integrations/exception-handler/interfaces';
 import { StorageDriverType } from 'src/integrations/file-storage/interfaces';
@@ -170,6 +172,49 @@ export class EnvironmentService {
     );
   }
 
+  getEmailFromAddress(): string {
+    return (
+      this.configService.get<string>('EMAIL_FROM_ADDRESS') ??
+      'noreply@yourdomain.com'
+    );
+  }
+
+  getEmailSystemAddress(): string {
+    return (
+      this.configService.get<string>('EMAIL_SYSTEM_ADDRESS') ??
+      'system@yourdomain.com'
+    );
+  }
+
+  getEmailFromName(): string {
+    return (
+      this.configService.get<string>('EMAIL_FROM_NAME') ??
+      'John from YourDomain'
+    );
+  }
+
+  getEmailDriver(): EmailDriver {
+    return (
+      this.configService.get<EmailDriver>('EMAIL_DRIVER') ?? EmailDriver.Logger
+    );
+  }
+
+  getEmailHost(): string | undefined {
+    return this.configService.get<string>('EMAIL_SMTP_HOST');
+  }
+
+  getEmailPort(): number | undefined {
+    return this.configService.get<number>('EMAIL_SMTP_PORT');
+  }
+
+  getEmailUser(): string | undefined {
+    return this.configService.get<string>('EMAIL_SMTP_USER');
+  }
+
+  getEmailPassword(): string | undefined {
+    return this.configService.get<string>('EMAIL_SMTP_PASSWORD');
+  }
+
   getSupportDriver(): string {
     return (
       this.configService.get<string>('SUPPORT_DRIVER') ?? SupportDriver.None
@@ -219,5 +264,27 @@ export class EnvironmentService {
 
   getOpenRouterApiKey(): string | undefined {
     return this.configService.get<string | undefined>('OPENROUTER_API_KEY');
+  }
+
+  getPasswordResetTokenExpiresIn(): string {
+    return (
+      this.configService.get<string>('PASSWORD_RESET_TOKEN_EXPIRES_IN') ?? '5m'
+    );
+  }
+
+  getInactiveDaysBeforeEmail(): number | undefined {
+    return this.configService.get<number | undefined>(
+      'WORKSPACE_INACTIVE_DAYS_BEFORE_NOTIFICATION',
+    );
+  }
+
+  getInactiveDaysBeforeDelete(): number | undefined {
+    return this.configService.get<number | undefined>(
+      'WORKSPACE_INACTIVE_DAYS_BEFORE_DELETION',
+    );
+  }
+
+  isSignUpDisabled(): boolean {
+    return this.configService.get<boolean>('IS_SIGN_UP_DISABLED') ?? false;
   }
 }

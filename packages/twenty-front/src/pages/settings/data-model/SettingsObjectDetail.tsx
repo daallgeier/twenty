@@ -15,6 +15,7 @@ import {
   SettingsObjectFieldItemTableRow,
   StyledObjectFieldTableRow,
 } from '@/settings/data-model/object-details/components/SettingsObjectFieldItemTableRow';
+import { getFieldIdentifierType } from '@/settings/data-model/utils/getFieldIdentifierType';
 import { AppPath } from '@/types/AppPath';
 import { IconPlus, IconSettings } from '@/ui/display/icon';
 import { H2Title } from '@/ui/display/typography/components/H2Title';
@@ -25,6 +26,7 @@ import { Table } from '@/ui/layout/table/components/Table';
 import { TableHeader } from '@/ui/layout/table/components/TableHeader';
 import { TableSection } from '@/ui/layout/table/components/TableSection';
 import { Breadcrumb } from '@/ui/navigation/bread-crumb/components/Breadcrumb';
+import { FieldMetadataType } from '~/generated-metadata/graphql';
 
 const StyledDiv = styled.div`
   display: flex;
@@ -36,8 +38,11 @@ export const SettingsObjectDetail = () => {
   const navigate = useNavigate();
 
   const { objectSlug = '' } = useParams();
-  const { disableObjectMetadataItem, findActiveObjectMetadataItemBySlug } =
-    useObjectMetadataItemForSettings();
+  const {
+    disableObjectMetadataItem,
+    editObjectMetadataItem,
+    findActiveObjectMetadataItemBySlug,
+  } = useObjectMetadataItemForSettings();
 
   const activeObjectMetadataItem =
     findActiveObjectMetadataItemBySlug(objectSlug);
@@ -63,10 +68,17 @@ export const SettingsObjectDetail = () => {
     navigate('/settings/objects');
   };
 
-  const handleDisableField = async (
+  const handleDisableField = (activeFieldMetadatItem: FieldMetadataItem) => {
+    disableMetadataField(activeFieldMetadatItem);
+  };
+
+  const handleSetLabelIdentifierField = (
     activeFieldMetadatItem: FieldMetadataItem,
   ) => {
-    disableMetadataField(activeFieldMetadatItem);
+    editObjectMetadataItem({
+      ...activeObjectMetadataItem,
+      labelIdentifierFieldMetadataId: activeFieldMetadatItem.id,
+    });
   };
 
   return (
@@ -93,35 +105,66 @@ export const SettingsObjectDetail = () => {
           <Table>
             <StyledObjectFieldTableRow>
               <TableHeader>Name</TableHeader>
-              <TableHeader>Field type</TableHeader>
+              <TableHeader>
+                {activeObjectMetadataItem.isCustom
+                  ? 'Identifier'
+                  : 'Field type'}
+              </TableHeader>
               <TableHeader>Data type</TableHeader>
               <TableHeader></TableHeader>
             </StyledObjectFieldTableRow>
             {!!activeMetadataFields.length && (
               <TableSection title="Active">
-                {activeMetadataFields.map((activeMetadataField) => (
-                  <SettingsObjectFieldItemTableRow
-                    key={activeMetadataField.id}
-                    fieldMetadataItem={activeMetadataField}
-                    ActionIcon={
-                      <SettingsObjectFieldActiveActionDropdown
-                        isCustomField={!!activeMetadataField.isCustom}
-                        scopeKey={activeMetadataField.id}
-                        onEdit={() =>
-                          navigate(`./${getFieldSlug(activeMetadataField)}`)
-                        }
-                        onDisable={
-                          isLabelIdentifierField({
-                            fieldMetadataItem: activeMetadataField,
-                            objectMetadataItem: activeObjectMetadataItem,
-                          })
-                            ? undefined
-                            : () => handleDisableField(activeMetadataField)
-                        }
-                      />
-                    }
-                  />
-                ))}
+                {activeMetadataFields.map((activeMetadataField) => {
+                  const isLabelIdentifier = isLabelIdentifierField({
+                    fieldMetadataItem: activeMetadataField,
+                    objectMetadataItem: activeObjectMetadataItem,
+                  });
+                  const canBeSetAsLabelIdentifier =
+                    activeObjectMetadataItem.isCustom &&
+                    !isLabelIdentifier &&
+                    [FieldMetadataType.Text, FieldMetadataType.Number].includes(
+                      activeMetadataField.type,
+                    );
+
+                  return (
+                    <SettingsObjectFieldItemTableRow
+                      key={activeMetadataField.id}
+                      identifierType={getFieldIdentifierType(
+                        activeMetadataField,
+                        activeObjectMetadataItem,
+                      )}
+                      variant={
+                        activeObjectMetadataItem.isCustom
+                          ? 'identifier'
+                          : 'field-type'
+                      }
+                      fieldMetadataItem={activeMetadataField}
+                      ActionIcon={
+                        <SettingsObjectFieldActiveActionDropdown
+                          isCustomField={!!activeMetadataField.isCustom}
+                          scopeKey={activeMetadataField.id}
+                          onEdit={() =>
+                            navigate(`./${getFieldSlug(activeMetadataField)}`)
+                          }
+                          onSetAsLabelIdentifier={
+                            canBeSetAsLabelIdentifier
+                              ? () =>
+                                  handleSetLabelIdentifierField(
+                                    activeMetadataField,
+                                  )
+                              : undefined
+                          }
+                          onDisable={
+                            isLabelIdentifier
+                              ? undefined
+                              : () => handleDisableField(activeMetadataField)
+                          }
+                        />
+                      }
+                    />
+                  );
+                })}
               </TableSection>
             )}
             {!!disabledMetadataFields.length && (
@@ -129,6 +172,11 @@ export const SettingsObjectDetail = () => {
                 {disabledMetadataFields.map((disabledMetadataField) => (
                   <SettingsObjectFieldItemTableRow
                     key={disabledMetadataField.id}
+                    variant={
+                      activeObjectMetadataItem.isCustom
+                        ? 'identifier'
+                        : 'field-type'
+                    }
                     fieldMetadataItem={disabledMetadataField}
                     ActionIcon={
                       <SettingsObjectFieldDisabledActionDropdown

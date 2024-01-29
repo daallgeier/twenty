@@ -5,7 +5,7 @@ import { MockedProvider } from '@apollo/client/testing';
 import { renderHook, waitFor } from '@testing-library/react';
 import { RecoilRoot, useRecoilState, useRecoilValue } from 'recoil';
 
-import { FieldMetadata } from '@/object-record/field/types/FieldMetadata';
+import { FieldMetadata } from '@/object-record/record-field/types/FieldMetadata';
 import { ColumnDefinition } from '@/object-record/record-table/types/ColumnDefinition';
 import { getScopedFamilyStateDeprecated } from '@/ui/utilities/recoil-scope/utils/getScopedFamilyStateDeprecated';
 import { useViewScopedStates } from '@/views/hooks/internal/useViewScopedStates';
@@ -159,18 +159,7 @@ describe('useViewBar > viewFields', () => {
     await act(async () => {
       result.current.viewBar.setAvailableFieldDefinitions([fieldDefinition]);
 
-      await result.current.viewBar.loadViewFields(
-        {
-          edges: [
-            {
-              node: viewField,
-              cursor: '',
-            },
-          ],
-          pageInfo: { hasNextPage: false, startCursor: '', endCursor: '' },
-        },
-        currentViewId,
-      );
+      await result.current.viewBar.loadViewFields([viewField], currentViewId);
       result.current.viewBar.setCurrentViewId(currentViewId);
     });
 

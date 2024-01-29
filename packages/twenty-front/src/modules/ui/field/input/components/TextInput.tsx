@@ -1,9 +1,8 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import styled from '@emotion/styled';
 
+import { useRegisterInputEvents } from '@/object-record/record-field/meta-types/input/hooks/useRegisterInputEvents';
 import { textInputStyle } from '@/ui/theme/constants/effects';
-
-import { useRegisterInputEvents } from '../../../../object-record/field/meta-types/input/hooks/useRegisterInputEvents';
 
 export const StyledInput = styled.input`
   margin: 0;
@@ -21,6 +20,7 @@ type TextInputProps = {
   onShiftTab?: (newText: string) => void;
   onClickOutside: (event: MouseEvent | TouchEvent, inputValue: string) => void;
   hotkeyScope: string;
+  onChange?: (newText: string) => void;
 };
 
 export const TextInput = ({
@@ -33,6 +33,7 @@ export const TextInput = ({
   onTab,
   onShiftTab,
   onClickOutside,
+  onChange,
 }: TextInputProps) => {
   const [internalText, setInternalText] = useState(value);
 
@@ -40,6 +41,7 @@ export const TextInput = ({
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setInternalText(event.target.value);
+    onChange?.(event.target.value);
   };
 
   useEffect(() => {

@@ -1,28 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from '@apollo/client';
 import { useRecoilValue } from 'recoil';
 
-import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
 import { CoreObjectNameSingular } from '@/object-metadata/types/CoreObjectNameSingular';
-import { SingleEntitySelectBase } from '@/object-record/relation-picker/components/SingleEntitySelectBase';
-import { useEntitySelectSearch } from '@/object-record/relation-picker/hooks/useEntitySelectSearch';
-import { useRelationPicker } from '@/object-record/relation-picker/hooks/useRelationPicker';
+import { SingleEntitySelectMenuItemsWithSearch } from '@/object-record/relation-picker/components/SingleEntitySelectMenuItemsWithSearch';
 import { EntityForSelect } from '@/object-record/relation-picker/types/EntityForSelect';
 import { currentPipelineStepsState } from '@/pipeline/states/currentPipelineStepsState';
-import { useFilteredSearchEntityQuery } from '@/search/hooks/useFilteredSearchEntityQuery';
 import { IconChevronDown } from '@/ui/display/icon';
 import { DropdownMenu } from '@/ui/layout/dropdown/components/DropdownMenu';
 import { DropdownMenuHeader } from '@/ui/layout/dropdown/components/DropdownMenuHeader';
 import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
-import { DropdownMenuSearchInput } from '@/ui/layout/dropdown/components/DropdownMenuSearchInput';
 import { DropdownMenuSeparator } from '@/ui/layout/dropdown/components/DropdownMenuSeparator';
 import { MenuItem } from '@/ui/navigation/menu-item/components/MenuItem';
-import { RecoilScope } from '@/ui/utilities/recoil-scope/components/RecoilScope';
 
 export type OpportunityPickerProps = {
   companyId: string | null;
   onSubmit: (
-    newCompanyId: EntityForSelect | null,
+    newCompany: EntityForSelect | null,
     newPipelineStepId: string | null,
   ) => void;
   onCancel?: () => void;
@@ -33,30 +26,6 @@ export const OpportunityPicker = ({
   onCancel,
 }: OpportunityPickerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const { searchFilter, handleSearchFilterChange } = useEntitySelectSearch();
-
-  // TODO: refactor useFilteredSearchEntityQuery
-  const { findManyRecordsQuery: findManyCompanies } = useObjectMetadataItem({
-    objectNameSingular: CoreObjectNameSingular.Company,
-  });
-  const useFindManyQuery = (options: any) =>
-    useQuery(findManyCompanies, options);
-  const { identifiersMapper, searchQuery } = useRelationPicker();
-
-  const filteredSearchEntityResults = useFilteredSearchEntityQuery({
-    queryHook: useFindManyQuery,
-    filters: [
-      {
-        fieldNames: searchQuery?.computeFilterFields?.('company') ?? [],
-        filter: searchFilter,
-      },
-    ],
-    orderByField: 'createdAt',
-    selectedIds: [],
-    mappingFunction: (record: any) => identifiersMapper?.(record, 'company'),
-    objectNameSingular: CoreObjectNameSingular.Company,
-  });
 
   const [isProgressSelectionUnfolded, setIsProgressSelectionUnfolded] =
     useState(false);
@@ -120,21 +89,12 @@ export const OpportunityPicker = ({
             {selectedPipelineStep?.name}
           </DropdownMenuHeader>
           <DropdownMenuSeparator />
-          <DropdownMenuSearchInput
-            value={searchFilter}
-            onChange={handleSearchFilterChange}
-            autoFocus
+          <SingleEntitySelectMenuItemsWithSearch
+            onCancel={onCancel}
+            onEntitySelected={handleEntitySelected}
+            relationObjectNameSingular={CoreObjectNameSingular.Company}
+            selectedRelationRecordIds={[]}
           />
-          <DropdownMenuSeparator />
-          <RecoilScope>
-            <SingleEntitySelectBase
-              entitiesToSelect={filteredSearchEntityResults.entitiesToSelect}
-              loading={filteredSearchEntityResults.loading}
-              onCancel={onCancel}
-              onEntitySelected={handleEntitySelected}
-              selectedEntity={filteredSearchEntityResults.selectedEntities[0]}
-            />
-          </RecoilScope>
         </>
       )}
     </DropdownMenu>

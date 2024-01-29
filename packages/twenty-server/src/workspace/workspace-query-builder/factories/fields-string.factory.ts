@@ -5,6 +5,7 @@ import graphqlFields from 'graphql-fields';
 import isEmpty from 'lodash.isempty';
 
 import { FieldMetadataInterface } from 'src/metadata/field-metadata/interfaces/field-metadata.interface';
+import { ObjectMetadataInterface } from 'src/metadata/field-metadata/interfaces/object-metadata.interface';
 
 import { isRelationFieldMetadataType } from 'src/workspace/utils/is-relation-field-metadata-type.util';
 
@@ -23,14 +24,15 @@ export class FieldsStringFactory {
   create(
     info: GraphQLResolveInfo,
     fieldMetadataCollection: FieldMetadataInterface[],
+    objectMetadataCollection: ObjectMetadataInterface[],
   ): Promise<string> {
-    // @ts-expect-error Todo: Fix typing error
     const selectedFields: Record<string, any> = graphqlFields(info);
 
     return this.createFieldsStringRecursive(
       info,
       selectedFields,
       fieldMetadataCollection,
+      objectMetadataCollection,
     );
   }
 
@@ -38,6 +40,7 @@ export class FieldsStringFactory {
     info: GraphQLResolveInfo,
     selectedFields: Record<string, any>,
     fieldMetadataCollection: FieldMetadataInterface[],
+    objectMetadataCollection: ObjectMetadataInterface[],
     accumulator = '',
   ): Promise<string> {
     const fieldMetadataMap = new Map(
@@ -59,6 +62,7 @@ export class FieldsStringFactory {
             fieldKey,
             fieldValue,
             fieldMetadata,
+            objectMetadataCollection,
             info,
           );
 
@@ -85,6 +89,7 @@ export class FieldsStringFactory {
           info,
           fieldValue,
           fieldMetadataCollection,
+          objectMetadataCollection,
           accumulator,
         );
         accumulator += `}\n`;

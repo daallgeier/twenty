@@ -1,13 +1,14 @@
-import { PaginatedRecordTypeResults } from '@/object-record/types/PaginatedRecordTypeResults';
 import { ViewField } from '@/views/types/ViewField';
 import { ViewFilter } from '@/views/types/ViewFilter';
 import { ViewSort } from '@/views/types/ViewSort';
+import { ViewType } from '@/views/types/ViewType';
 
 export type GraphQLView = {
   id: string;
   name: string;
+  type: ViewType;
   objectMetadataId: string;
-  viewFields: PaginatedRecordTypeResults<ViewField>;
-  viewFilters: PaginatedRecordTypeResults<ViewFilter>;
-  viewSorts: PaginatedRecordTypeResults<ViewSort>;
+  viewFields: ViewField[];
+  viewFilters: ViewFilter[];
+  viewSorts: ViewSort[];
 };

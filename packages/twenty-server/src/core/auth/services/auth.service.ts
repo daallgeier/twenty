@@ -10,6 +10,8 @@ import { HttpService } from '@nestjs/axios';
 import FileType from 'file-type';
 import { Repository } from 'typeorm';
 import { v4 } from 'uuid';
+import { render } from '@react-email/components';
+import { PasswordUpdateNotifyEmail } from 'twenty-emails';
 
 import { FileFolder } from 'src/core/file/interfaces/file-folder.interface';
 
@@ -29,6 +31,9 @@ import { UserService } from 'src/core/user/services/user.service';
 import { WorkspaceManagerService } from 'src/workspace/workspace-manager/workspace-manager.service';
 import { getImageBufferFromUrl } from 'src/utils/image';
 import { FileUploadService } from 'src/core/file/services/file-upload.service';
+import { EnvironmentService } from 'src/integrations/environment/environment.service';
+import { EmailService } from 'src/integrations/email/email.service';
+import { UpdatePassword } from 'src/core/auth/dto/update-password.entity';
 
 import { TokenService } from './token.service';
 
@@ -50,6 +55,8 @@ export class AuthService {
     @InjectRepository(User, 'core')
     private readonly userRepository: Repository<User>,
     private readonly httpService: HttpService,
+    private readonly environmentService: EnvironmentService,
+    private readonly emailService: EmailService,
   ) {}
 
   async challenge(challengeInput: ChallengeInput) {
@@ -114,6 +121,12 @@ export class AuthService {
         ForbiddenException,
       );
     } else {
+      assert(
+        !this.environmentService.isSignUpDisabled(),
+        'Sign up is disabled',
+        ForbiddenException,
+      );
+
       const workspaceToCreate = this.workspaceRepository.create({
         displayName: '',
         domainName: '',
@@ -232,5 +245,47 @@ export class AuthService {
         refreshToken,
       },
     };
+  }
+
+  async updatePassword(
+    userId: string,
+    newPassword: string,
+  ): Promise<UpdatePassword> {
+    const user = await this.userRepository.findOneBy({ id: userId });
+
+    assert(user, 'User not found', NotFoundException);
+
+    const isPasswordValid = PASSWORD_REGEX.test(newPassword);
+
+    assert(isPasswordValid, 'Password too weak', BadRequestException);
+
+    const newPasswordHash = await hashPassword(newPassword);
+
+    await this.userRepository.update(userId, {
+      passwordHash: newPasswordHash,
+    });
+
+    const emailTemplate = PasswordUpdateNotifyEmail({
+      userName: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      link: this.environmentService.getFrontBaseUrl(),
+    });
+
+    const html = render(emailTemplate, {
+      pretty: true,
+    });
+    const text = render(emailTemplate, {
+      plainText: true,
+    });
+
+    this.emailService.send({
+      from: `${this.environmentService.getEmailFromName()} <${this.environmentService.getEmailFromAddress()}>`,
+      to: user.email,
+      subject: 'Your Password Has Been Successfully Changed',
+      text,
+      html,
+    });
+
+    return { success: true };
   }
 }

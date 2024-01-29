@@ -1,7 +1,7 @@
 import { useRecoilValue } from 'recoil';
 
 import { objectMetadataItemsState } from '@/object-metadata/states/objectMetadataItemsState';
-import { FieldType } from '@/object-record/field/types/FieldType';
+import { FieldType } from '@/object-record/record-field/types/FieldType';
 
 import { FieldMetadataItem } from '../types/FieldMetadataItem';
 
@@ -28,6 +28,7 @@ export const useMapFieldMetadataToGraphQLQuery = () => {
         'EMAIL',
         'NUMBER',
         'BOOLEAN',
+        'SELECT',
       ] as FieldType[]
     ).includes(fieldType);
 
@@ -47,7 +48,25 @@ export const useMapFieldMetadataToGraphQLQuery = () => {
     {
       id
       ${(relationMetadataItem?.fields ?? [])
-        .filter((field) => field.type !== 'RELATION')
+        .map((field) =>
+          mapFieldMetadataToGraphQLQuery(field, maxDepthForRelations - 1),
+        )
+        .join('\n')}
+    }`;
+    } else if (
+      fieldType === 'RELATION' &&
+      field.toRelationMetadata?.relationType === 'ONE_TO_ONE'
+    ) {
+      const relationMetadataItem = objectMetadataItems.find(
+        (objectMetadataItem) =>
+          objectMetadataItem.id ===
+          (field.toRelationMetadata as any)?.fromObjectMetadata?.id,
+      );
+
+      return `${field.name}
+    {
+      id
+      ${(relationMetadataItem?.fields ?? [])
         .map((field) =>
           mapFieldMetadataToGraphQLQuery(field, maxDepthForRelations - 1),
         )
@@ -69,7 +88,6 @@ export const useMapFieldMetadataToGraphQLQuery = () => {
           node {
             id
             ${(relationMetadataItem?.fields ?? [])
-              .filter((field) => field.type !== 'RELATION')
               .map((field) =>
                 mapFieldMetadataToGraphQLQuery(field, maxDepthForRelations - 1),
               )

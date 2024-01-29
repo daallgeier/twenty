@@ -3,11 +3,10 @@ import { useTheme } from '@emotion/react';
 import styled from '@emotion/styled';
 import { flip, offset, useFloating } from '@floating-ui/react';
 
+import { useRegisterInputEvents } from '@/object-record/record-field/meta-types/input/hooks/useRegisterInputEvents';
 import { DateDisplay } from '@/ui/field/display/components/DateDisplay';
 import { InternalDatePicker } from '@/ui/input/components/internal/date/components/InternalDatePicker';
 import { Nullable } from '~/types/Nullable';
-
-import { useRegisterInputEvents } from '../../../../object-record/field/meta-types/input/hooks/useRegisterInputEvents';
 
 const StyledCalendarContainer = styled.div`
   background: ${({ theme }) => theme.background.secondary};
@@ -38,6 +37,7 @@ export type DateInputProps = {
   ) => void;
   hotkeyScope: string;
   clearable?: boolean;
+  onChange?: (newDate: Nullable<Date>) => void;
 };
 
 export const DateInput = ({
@@ -47,6 +47,7 @@ export const DateInput = ({
   onEscape,
   onClickOutside,
   clearable,
+  onChange,
 }: DateInputProps) => {
   const theme = useTheme();
 
@@ -66,6 +67,7 @@ export const DateInput = ({
 
   const handleChange = (newDate: Date) => {
     setInternalValue(newDate);
+    onChange?.(newDate);
   };
 
   useEffect(() => {

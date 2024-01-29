@@ -1,12 +1,13 @@
 import styled from '@emotion/styled';
+import { useRecoilValue } from 'recoil';
 
-import { Threads } from '@/activities/emails/components/Threads';
+import { EmailThreads } from '@/activities/emails/components/EmailThreads';
 import { Attachments } from '@/activities/files/components/Attachments';
 import { Notes } from '@/activities/notes/components/Notes';
 import { ObjectTasks } from '@/activities/tasks/components/ObjectTasks';
 import { Timeline } from '@/activities/timeline/components/Timeline';
 import { ActivityTargetableObject } from '@/activities/types/ActivityTargetableEntity';
-import { isStandardObject } from '@/object-metadata/utils/isStandardObject';
+import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
 import {
   IconCheckbox,
   IconMail,
@@ -15,12 +16,9 @@ import {
   IconTimelineEvent,
 } from '@/ui/display/icon';
 import { TabList } from '@/ui/layout/tab/components/TabList';
-import { activeTabIdScopedState } from '@/ui/layout/tab/states/activeTabIdScopedState';
-import { useRecoilScopedState } from '@/ui/utilities/recoil-scope/hooks/useRecoilScopedState';
+import { useTabList } from '@/ui/layout/tab/hooks/useTabList';
 import { useIsMobile } from '@/ui/utilities/responsive/hooks/useIsMobile';
 import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
-
-import { ShowPageRecoilScopeContext } from '../../states/ShowPageRecoilScopeContext';
 
 const StyledShowPageRightContainer = styled.div`
   display: flex;
@@ -40,8 +38,10 @@ const StyledTabListContainer = styled.div`
   height: 40px;
 `;
 
+const TAB_LIST_COMPONENT_ID = 'show-page-right-tab-list';
+
 type ShowPageRightContainerProps = {
-  targetableObject?: ActivityTargetableObject;
+  targetableObject: ActivityTargetableObject;
   timeline?: boolean;
   tasks?: boolean;
   notes?: boolean;
@@ -56,16 +56,14 @@ export const ShowPageRightContainer = ({
   emails,
 }: ShowPageRightContainerProps) => {
   const isMessagingEnabled = useIsFeatureEnabled('IS_MESSAGING_ENABLED');
-  const [activeTabId] = useRecoilScopedState(
-    activeTabIdScopedState,
-    ShowPageRecoilScopeContext,
-  );
 
-  if (!targetableObject) return <></>;
+  const { getActiveTabIdState } = useTabList(TAB_LIST_COMPONENT_ID);
+  const activeTabId = useRecoilValue(getActiveTabIdState());
 
-  const targetableObjectIsStandardObject = isStandardObject(
-    targetableObject.targetObjectNameSingular,
-  );
+  const { objectMetadataItem: targetableObjectMetadataItem } =
+    useObjectMetadataItem({
+      objectNameSingular: targetableObject.targetObjectNameSingular,
+    });
 
   const TASK_TABS = [
     {
@@ -91,21 +89,21 @@ export const ShowPageRightContainer = ({
       title: 'Files',
       Icon: IconPaperclip,
       hide: !notes,
-      disabled: !targetableObjectIsStandardObject,
+      disabled: targetableObjectMetadataItem.isCustom,
     },
     {
       id: 'emails',
       title: 'Emails',
       Icon: IconMail,
       hide: !emails,
-      disabled: !isMessagingEnabled || !targetableObjectIsStandardObject,
+      disabled: !isMessagingEnabled || targetableObjectMetadataItem.isCustom,
     },
   ];
 
   return (
     <StyledShowPageRightContainer>
       <StyledTabListContainer>
-        <TabList context={ShowPageRecoilScopeContext} tabs={TASK_TABS} />
+        <TabList tabListId={TAB_LIST_COMPONENT_ID} tabs={TASK_TABS} />
       </StyledTabListContainer>
       {activeTabId === 'timeline' && (
         <Timeline targetableObject={targetableObject} />
@@ -117,7 +115,7 @@ export const ShowPageRightContainer = ({
       {activeTabId === 'files' && (
         <Attachments targetableObject={targetableObject} />
       )}
-      {activeTabId === 'emails' && <Threads entity={targetableObject} />}
+      {activeTabId === 'emails' && <EmailThreads entity={targetableObject} />}
     </StyledShowPageRightContainer>
   );
 };

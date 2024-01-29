@@ -2,6 +2,7 @@ import { useState } from 'react';
 import styled from '@emotion/styled';
 import { useRecoilValue } from 'recoil';
 
+import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
 import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { CoreObjectNameSingular } from '@/object-metadata/types/CoreObjectNameSingular';
 import { useDeleteOneRecord } from '@/object-record/hooks/useDeleteOneRecord';
@@ -38,11 +39,11 @@ export const SettingsWorkspaceMembers = () => {
   const { records: workspaceMembers } = useFindManyRecords<WorkspaceMember>({
     objectNameSingular: CoreObjectNameSingular.WorkspaceMember,
   });
-  const { deleteOneRecord: deleteOneWorkspaceMember } =
-    useDeleteOneRecord<WorkspaceMember>({
-      objectNameSingular: CoreObjectNameSingular.WorkspaceMember,
-    });
+  const { deleteOneRecord: deleteOneWorkspaceMember } = useDeleteOneRecord({
+    objectNameSingular: CoreObjectNameSingular.WorkspaceMember,
+  });
   const currentWorkspace = useRecoilValue(currentWorkspaceState);
+  const currentWorkspaceMember = useRecoilValue(currentWorkspaceMemberState);
 
   const handleRemoveWorkspaceMember = async (workspaceMemberId: string) => {
     await deleteOneWorkspaceMember?.(workspaceMemberId);
@@ -51,7 +52,7 @@ export const SettingsWorkspaceMembers = () => {
 
   return (
     <SubMenuTopBarContainer Icon={IconSettings} title="Settings">
-      <SettingsPageContainer width={350}>
+      <SettingsPageContainer>
         <StyledH1Title title="Members" />
         {currentWorkspace?.inviteHash && (
           <Section>
@@ -74,7 +75,7 @@ export const SettingsWorkspaceMembers = () => {
               key={member.id}
               workspaceMember={member as WorkspaceMember}
               accessory={
-                currentWorkspace?.id !== member.id && (
+                currentWorkspaceMember?.id !== member.id && (
                   <StyledButtonContainer>
                     <IconButton
                       onClick={() => {

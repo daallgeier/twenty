@@ -1,4 +1,4 @@
-import { CurrencyCode } from '@/object-record/field/types/CurrencyCode';
+import { CurrencyCode } from '@/object-record/record-field/types/CurrencyCode';
 import { Select } from '@/ui/input/components/Select';
 import { CardContent } from '@/ui/layout/card/components/CardContent';
 
@@ -24,7 +24,7 @@ export const SettingsObjectFieldCurrencyForm = ({
       fullWidth
       disabled={disabled}
       label="Unit"
-      dropdownScopeId="currency-unit-select"
+      dropdownId="currency-unit-select"
       value={values.currencyCode}
       options={Object.entries(settingsFieldCurrencyCodes).map(
         ([value, { label, Icon }]) => ({

@@ -3,12 +3,10 @@ import styled from '@emotion/styled';
 import { useRecoilCallback, useRecoilValue } from 'recoil';
 
 import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
-import { useObjectNameSingularFromPlural } from '@/object-metadata/hooks/useObjectNameSingularFromPlural';
+import { useDeleteOneRecord } from '@/object-record/hooks/useDeleteOneRecord';
 import { RecordTable } from '@/object-record/record-table/components/RecordTable';
-import { RecordTableFirstColumnScrollObserver } from '@/object-record/record-table/components/RecordTableFirstColumnScrollObserver';
-import { RecordTableRefContextWrapper } from '@/object-record/record-table/components/RecordTableRefContext';
-import { useRecordTableScopedStates } from '@/object-record/record-table/hooks/internal/useRecordTableScopedStates';
-import { getRecordTableScopeInjector } from '@/object-record/record-table/utils/getRecordTableScopeInjector';
+import { EntityDeleteContext } from '@/object-record/record-table/contexts/EntityDeleteHookContext';
+import { useRecordTableStates } from '@/object-record/record-table/hooks/internal/useRecordTableStates';
 import { IconPlus } from '@/ui/display/icon';
 import { Button } from '@/ui/input/button/components/Button';
 import { DragSelect } from '@/ui/utilities/drag-select/components/DragSelect';
@@ -18,7 +16,6 @@ import { mapColumnDefinitionsToViewFields } from '@/views/utils/mapColumnDefinit
 
 import { RecordUpdateContext } from '../contexts/EntityUpdateMutationHookContext';
 import { useRecordTable } from '../hooks/useRecordTable';
-import { RecordTableScope } from '../scopes/RecordTableScope';
 
 import { RecordTableInternalEffect } from './RecordTableInternalEffect';
 
@@ -66,52 +63,33 @@ const StyledTableContainer = styled.div`
 `;
 
 type RecordTableWithWrappersProps = {
+  objectNameSingular: string;
   recordTableId: string;
   viewBarId: string;
   updateRecordMutation: (params: any) => void;
-  createRecord: () => void;
+  createRecord: () => Promise<void>;
 };
 
 export const RecordTableWithWrappers = ({
   updateRecordMutation,
   createRecord,
+  objectNameSingular,
   recordTableId,
   viewBarId,
 }: RecordTableWithWrappersProps) => {
   const tableBodyRef = useRef<HTMLDivElement>(null);
 
-  const {
-    numberOfTableRowsScopeInjector,
-    isRecordTableInitialLoadingScopeInjector,
-  } = getRecordTableScopeInjector();
+  const { getNumberOfTableRowsState, getIsRecordTableInitialLoadingState } =
+    useRecordTableStates(recordTableId);
 
-  const { injectStateWithRecordTableScopeId } =
-    useRecordTableScopedStates(recordTableId);
-
-  const numberOfTableRowsState = injectStateWithRecordTableScopeId(
-    numberOfTableRowsScopeInjector,
-  );
-
-  const isRecordTableInitialLoadingState = injectStateWithRecordTableScopeId(
-    isRecordTableInitialLoadingScopeInjector,
-  );
-
-  const numberOfTableRows = useRecoilValue(numberOfTableRowsState);
+  const numberOfTableRows = useRecoilValue(getNumberOfTableRowsState());
 
   const isRecordTableInitialLoading = useRecoilValue(
-    isRecordTableInitialLoadingState,
+    getIsRecordTableInitialLoadingState(),
   );
 
-  const {
-    scopeId: objectNamePlural,
-    resetTableRowSelection,
-    setRowSelectedState,
-  } = useRecordTable({
-    recordTableScopeId: recordTableId,
-  });
-
-  const { objectNameSingular } = useObjectNameSingularFromPlural({
-    objectNamePlural,
+  const { resetTableRowSelection, setRowSelectedState } = useRecordTable({
+    recordTableId,
   });
 
   const { objectMetadataItem: foundObjectMetadataItem } = useObjectMetadataItem(
@@ -122,49 +100,55 @@ export const RecordTableWithWrappers = ({
 
   const { persistViewFields } = useViewFields(viewBarId);
 
+  const { deleteOneRecord } = useDeleteOneRecord({ objectNameSingular });
+
   return (
-    <RecordTableScope
-      recordTableScopeId={recordTableId}
-      onColumnsChange={useRecoilCallback(() => (columns) => {
-        persistViewFields(mapColumnDefinitionsToViewFields(columns));
-      })}
-    >
+    <EntityDeleteContext.Provider value={deleteOneRecord}>
       <ScrollWrapper>
-        <RecordTableRefContextWrapper>
-          <RecordTableFirstColumnScrollObserver />
-          <RecordUpdateContext.Provider value={updateRecordMutation}>
-            <StyledTableWithHeader>
-              <StyledTableContainer>
-                <div ref={tableBodyRef}>
-                  <RecordTable createRecord={createRecord} />
-                  <DragSelect
-                    dragSelectable={tableBodyRef}
-                    onDragSelectionStart={resetTableRowSelection}
-                    onDragSelectionChange={setRowSelectedState}
+        <RecordUpdateContext.Provider value={updateRecordMutation}>
+          <StyledTableWithHeader>
+            <StyledTableContainer>
+              <div ref={tableBodyRef}>
+                <RecordTable
+                  recordTableId={recordTableId}
+                  objectNameSingular={objectNameSingular}
+                  onColumnsChange={useRecoilCallback(() => (columns) => {
+                    persistViewFields(
+                      mapColumnDefinitionsToViewFields(columns),
+                    );
+                  })}
+                  createRecord={createRecord}
+                />
+                <DragSelect
+                  dragSelectable={tableBodyRef}
+                  onDragSelectionStart={resetTableRowSelection}
+                  onDragSelectionChange={setRowSelectedState}
+                />
+              </div>
+              <RecordTableInternalEffect
+                recordTableId={recordTableId}
+                tableBodyRef={tableBodyRef}
+              />
+              {!isRecordTableInitialLoading && numberOfTableRows === 0 && (
+                <StyledObjectEmptyContainer>
+                  <StyledEmptyObjectTitle>
+                    No {foundObjectMetadataItem?.namePlural}
+                  </StyledEmptyObjectTitle>
+                  <StyledEmptyObjectSubTitle>
+                    Create one:
+                  </StyledEmptyObjectSubTitle>
+                  <Button
+                    Icon={IconPlus}
+                    title={`Add a ${foundObjectMetadataItem?.nameSingular}`}
+                    variant={'secondary'}
+                    onClick={createRecord}
                   />
-                </div>
-                <RecordTableInternalEffect tableBodyRef={tableBodyRef} />
-                {!isRecordTableInitialLoading && numberOfTableRows === 0 && (
-                  <StyledObjectEmptyContainer>
-                    <StyledEmptyObjectTitle>
-                      No {foundObjectMetadataItem?.namePlural}
-                    </StyledEmptyObjectTitle>
-                    <StyledEmptyObjectSubTitle>
-                      Create one:
-                    </StyledEmptyObjectSubTitle>
-                    <Button
-                      Icon={IconPlus}
-                      title={`Add a ${foundObjectMetadataItem?.nameSingular}`}
-                      variant={'secondary'}
-                      onClick={createRecord}
-                    />
-                  </StyledObjectEmptyContainer>
-                )}
-              </StyledTableContainer>
-            </StyledTableWithHeader>
-          </RecordUpdateContext.Provider>
-        </RecordTableRefContextWrapper>
+                </StyledObjectEmptyContainer>
+              )}
+            </StyledTableContainer>
+          </StyledTableWithHeader>
+        </RecordUpdateContext.Provider>
       </ScrollWrapper>
-    </RecordTableScope>
+    </EntityDeleteContext.Provider>
   );
 };
